@@ -47,13 +47,30 @@ app.options("*", cors()); // Handle preflight
 
 
 // Routes setup
+app.get("/", (req, res) => res.send("QuickChat API is running"));
+app.get("/favicon.ico", (req, res) => res.status(204).end());
 app.use("/api/status", (req, res) => res.send("Server is live"));
 app.use("/api/auth", userRouter);
 app.use("/api/messages", messageRouter)
 
 
-// Connect to MongoDB
-await connectDB();
+// Database connection wrapper for Vercel
+let isConnected = false;
+const connectToDB = async () => {
+    if (isConnected) return;
+    try {
+        await connectDB();
+        isConnected = true;
+    } catch (error) {
+        console.error("MongoDB Connection Error:", error);
+    }
+}
+
+// Middleware to ensure DB is connected
+app.use(async (req, res, next) => {
+    await connectToDB();
+    next();
+});
 
 if (process.env.NODE_ENV !== "production") {
     const PORT = process.env.PORT || 5001;
